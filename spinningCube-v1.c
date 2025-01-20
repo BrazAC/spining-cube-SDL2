@@ -6,6 +6,9 @@
 #define LARGURA_JANELA 640
 #define ALTURA_JANELA 480
 
+void tornaPixelsBrancos(Uint32*);
+void tornaPixelsPretos(Uint32*);
+
 int main(){
     //Declaracao de variaveis
     int fechar = 0;
@@ -39,11 +42,8 @@ int main(){
 
     //Criar mapa de pixels
     Uint32 *pixels = (Uint32*)malloc((LARGURA_JANELA * ALTURA_JANELA) * sizeof(Uint32));
-    //Colorir pixels (branco)
-    for(int i = 0; i < (LARGURA_JANELA * ALTURA_JANELA); i ++){
-        pixels[i] = 0xFFFFFFFF;
-    }
-
+    //Colorir pixels 
+    tornaPixelsPretos(pixels);
 
     //- Main loop (detecao de eventos)
     while(!fechar){
@@ -61,7 +61,7 @@ int main(){
         SDL_UpdateTexture(texturaBackground, NULL, pixels, LARGURA_JANELA * sizeof(Uint32));
         //Manda o renderizador limpar a tela (preenche com a cor configurada na declaracao)
         SDL_RenderClear(renderizador);
-        //Desenhar texturaBackground
+        //Copiar texturaBackground para o renderizador
         SDL_RenderCopy(renderizador, texturaBackground, NULL, NULL);
         //Carrega o back-buffer para o front-buffer
         SDL_RenderPresent(renderizador);
@@ -75,4 +75,16 @@ int main(){
     //Finalizando o SDL
     SDL_Quit();
     return 0;
+}
+
+void tornaPixelsBrancos(Uint32 *pixels){
+    for(int i = 0; i < (LARGURA_JANELA * ALTURA_JANELA); i ++){
+        pixels[i] = 0xFFFFFFFF;
+    }
+}
+
+void tornaPixelsPretos(Uint32 *pixels){
+    for(int i = 0; i < (LARGURA_JANELA * ALTURA_JANELA); i ++){
+        pixels[i] = 0;
+    }
 }
