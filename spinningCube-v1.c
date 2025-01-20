@@ -3,11 +3,8 @@
 
 //gcc spinningCube-v1.c `sdl2-config --cflags --libs` -o out
 
-#define LARGURA_JANELA 640
-#define ALTURA_JANELA 480
-
-void tornaPixelsBrancos(Uint32*);
-void tornaPixelsPretos(Uint32*);
+void tornaPixelsBrancos(Uint32*, int, int);
+void tornaPixelsPretos(Uint32*, int, int);
 
 int main(){
     //Declaracao de variaveis
@@ -17,6 +14,12 @@ int main(){
     //Inicializando SDL e indicando o uso do subsistema de video (tem varios)
     SDL_Init(SDL_INIT_VIDEO);
 
+    //Obter largura e altura da tela
+    SDL_DisplayMode displayMode;
+    SDL_GetCurrentDisplayMode(0, &displayMode);
+    int LARGURA_JANELA = displayMode.w; 
+    int ALTURA_JANELA = displayMode.h;
+
     //Criando janela
      SDL_Window *janela = SDL_CreateWindow(
         "Spining cube window 2000",
@@ -24,7 +27,7 @@ int main(){
         SDL_WINDOWPOS_UNDEFINED,
         LARGURA_JANELA,
         ALTURA_JANELA,
-        0
+        SDL_WINDOW_FULLSCREEN
     );
 
     //Criar renderizador
@@ -43,7 +46,7 @@ int main(){
     //Criar mapa de pixels
     Uint32 *pixels = (Uint32*)malloc((LARGURA_JANELA * ALTURA_JANELA) * sizeof(Uint32));
     //Colorir pixels 
-    tornaPixelsPretos(pixels);
+    tornaPixelsBrancos(pixels, LARGURA_JANELA, ALTURA_JANELA);
 
     //- Main loop (detecao de eventos)
     while(!fechar){
@@ -55,7 +58,7 @@ int main(){
             fechar = 1;
             break;
         } 
-
+        
         //- Configurando e mostrando textura do background
         //Carregando pixels na textura
         SDL_UpdateTexture(texturaBackground, NULL, pixels, LARGURA_JANELA * sizeof(Uint32));
@@ -63,6 +66,11 @@ int main(){
         SDL_RenderClear(renderizador);
         //Copiar texturaBackground para o renderizador
         SDL_RenderCopy(renderizador, texturaBackground, NULL, NULL);
+
+        //Desenhar linhas
+        SDL_RenderDrawLine(renderizador, 100, 100, 100, 300);
+        SDL_RenderDrawLine(renderizador, 100, 100, 300, 100);
+
         //Carrega o back-buffer para o front-buffer
         SDL_RenderPresent(renderizador);
     }
@@ -77,13 +85,13 @@ int main(){
     return 0;
 }
 
-void tornaPixelsBrancos(Uint32 *pixels){
+void tornaPixelsBrancos(Uint32 *pixels, int LARGURA_JANELA, int ALTURA_JANELA){
     for(int i = 0; i < (LARGURA_JANELA * ALTURA_JANELA); i ++){
         pixels[i] = 0xFFFFFFFF;
     }
 }
 
-void tornaPixelsPretos(Uint32 *pixels){
+void tornaPixelsPretos(Uint32 *pixels, int LARGURA_JANELA, int ALTURA_JANELA){
     for(int i = 0; i < (LARGURA_JANELA * ALTURA_JANELA); i ++){
         pixels[i] = 0;
     }
