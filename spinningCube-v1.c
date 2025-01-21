@@ -13,14 +13,14 @@ void tornaPixelsBrancos(Uint32*, int, int);
 void tornaPixelsPretos(Uint32*, int, int);
 
 typedef struct estruturaVertice3d {
-    float x;
-    float y;
-    float z;
+    double x;
+    double y;
+    double z;
 } estruturaVertice3d;
 
 typedef struct estruturaVertice2d {
-    float x;
-    float y;
+    double x;
+    double y;
 } estruturaVertice2d;
 
 typedef struct estruturaCubo3d {
@@ -31,7 +31,7 @@ typedef struct estruturaCubo2d {
     estruturaVertice2d vertices[8];
 } estruturaCubo2d;
 
-int* multiplicaMatrizes(int*, int*);
+void multiplicaMatrizes(double*, double[3][3], double*);
 
 int main(){
     //Inicializando SDL e indicando o uso do subsistema de video (tem varios)
@@ -48,7 +48,7 @@ int main(){
     int fechar = 0;
     SDL_Event evento;
 
-    //-- Preparar pontos com weak perspective projection
+    //-- Preparar pontos com otographic projection
     estruturaCubo3d cubo3d;
     //Pra y < 0
     cubo3d.vertices[0].x = -1;
@@ -83,7 +83,7 @@ int main(){
     cubo3d.vertices[7].y = 1;
     cubo3d.vertices[7].z = -1;
 
-    float mtzVertices3d[8][3] = {
+    double mtzVertices3d[8][3] = {
         {cubo3d.vertices[0].x, cubo3d.vertices[0].y, cubo3d.vertices[0].z},
         {cubo3d.vertices[1].x, cubo3d.vertices[1].y, cubo3d.vertices[1].z},
         {cubo3d.vertices[2].x, cubo3d.vertices[2].y, cubo3d.vertices[2].z},
@@ -94,9 +94,16 @@ int main(){
         {cubo3d.vertices[7].x, cubo3d.vertices[7].y, cubo3d.vertices[7].z}
     };
 
+    //Escalonar coordenadas
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 3; j ++) {
+            mtzVertices3d[i][j] *= 250; 
+        }
+    }
+
     //Converter para duas dimensoes
     estruturaCubo2d cubo2d;
-    int mtzVertices2d[8][2] = {
+    double mtzVertices2d[8][2] = {
         {cubo2d.vertices[0].x, cubo2d.vertices[0].y},
         {cubo2d.vertices[1].x, cubo2d.vertices[1].y},
         {cubo2d.vertices[2].x, cubo2d.vertices[2].y},
@@ -107,28 +114,71 @@ int main(){
         {cubo2d.vertices[7].x, cubo2d.vertices[7].y}
     };
     
-    //Criar mtzTransformacao3d_2d
-    //Calcular f (FOV VERTICAL)
-    double graus_FOV = 90;
-    double radian_FOV = graus_FOV * (M_PI / 180.0);
-    double f = ALTURA_JANELA / (2 * tan(radian_FOV));
-
-    //Criar matriz
-    int mtzTransformacaoOrtografica[3][3] = {
+    //Criar mtzTransformacaoOrtografica
+    double mtzTransformacaoOrtografica[3][3] = {
         {1, 0, 0},
         {0, 1, 0},
         {0, 0, 0},
     };
 
     //Multiplicar cada vetor de mtzVertices3d pela mtzTransformacaoOrtografica
+    double mtzResultado[3] = {0, 0, 0};
+
     for (int i = 0; i < 8; i ++) {
-        int *mtzResultado;
-        mtzResultado = multiplicaMatrizes(mtzVertices2d[i], mtzTransformacaoOrtografica);
-        mtzVertices2d[i][0] = mtzResultado[0];
-        mtzVertices2d[i][1] = mtzResultado[1];
+        //Converter vertice atual
+        multiplicaMatrizes(mtzVertices3d[i], mtzTransformacaoOrtografica, mtzResultado);
+        
+        //Armazenar vertice convertido
+        for (int j = 0; j < 2; j ++) {
+            mtzVertices2d[i][j] = mtzResultado[j]; 
+        }
+        
     }
 
-    //-- Mostrar os pontos com SDL
+    //Mostrando pontos
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 3; j ++) {
+            j == 2 ? printf("%f\n", mtzVertices3d[i][j]) : printf("%f", mtzVertices3d[i][j]);
+        }
+    }
+    printf("\n");
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 2; j ++) {
+            j == 1 ? printf("%f\n", mtzVertices2d[i][j]) : printf("%f", mtzVertices2d[i][j]);
+        }
+    }
+
+    //Ajustar intervalo dos valores (transformacao de janela para viewport)
+    //Dados
+    double xJanelaMax = 1920, xJanelaMin = 0;
+    double yJanelaMax = 1080, yJanelaMin = 0;
+
+    //Para cada vertice de mtzVertices2d
+    for (int i = 0; i < 8; i ++) {
+        //Calcular projecoes
+        //Calculo projecao em x
+        double proporcaoX = (mtzVertices2d[i][0] - xJanelaMin)/(xJanelaMax - xJanelaMin);
+        //Calculo projecao em y
+        double proporcaoY = (mtzVertices2d[i][1] - yJanelaMin)/(yJanelaMax - yJanelaMin);
+        printf("Proporcao x: %f, Proporcao y: %f\n", proporcaoX, proporcaoY);
+        //Calcular coordenadas na viewport
+        //Calculo coordenada x
+        mtzVertices2d[i][0] = (proporcaoX * LARGURA_JANELA + xJanelaMin) + (LARGURA_JANELA / 2);
+        //Calculo coordenada y
+        mtzVertices2d[i][1] = (proporcaoY * ALTURA_JANELA + yJanelaMin) + (ALTURA_JANELA / 2);
+    }
+
+    //Mostrar matriz com coordenadas para viewport
+    printf("\nCoordenadas para viewport:\n");
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 2; j ++) {
+            j == 1 ? printf("%f\n", mtzVertices2d[i][j]) : printf("%f", mtzVertices2d[i][j]);
+        }
+    }
+
+    //TODO Atualizar cubo2d (jogar dados da mtz pra estrutura de dados)
+
+    //-- Desenhar os pontos com SDL
     //Criando janela
      SDL_Window *janela = SDL_CreateWindow(
         "Spining cube window 2000",
@@ -177,8 +227,11 @@ int main(){
         SDL_RenderCopy(renderizador, texturaBackground, NULL, NULL);
 
         //Desenhar linhas
-        SDL_RenderDrawLine(renderizador, 100, 100, 100, 300);
-        SDL_RenderDrawLine(renderizador, 100, 100, 300, 100);
+        for (int i = 0; i < 7; i++) {
+            SDL_RenderDrawLine(renderizador, 
+            mtzVertices2d[i][0], mtzVertices2d[i][1], 
+            mtzVertices2d[i + 1][0], mtzVertices2d[i + 1][1]);
+        }
 
         //Carrega o back-buffer para o front-buffer
         SDL_RenderPresent(renderizador);
@@ -206,7 +259,14 @@ void tornaPixelsPretos(Uint32 *pixels, int LARGURA_JANELA, int ALTURA_JANELA){
     }
 }
 
-int* multiplicaMatrizes(int* mtz0, int* mtz1){
-    //2x1 * 3x3
-    
+void multiplicaMatrizes(double *mtz3x1, double mtz3x3[3][3], double *mtzResultado){
+    //3x1 * 3x3
+    double somaLinha;
+    for (int i = 0; i < 3; i ++) {
+        somaLinha = 0;
+        for (int j = 0; j < 3; j ++) {
+            somaLinha += mtz3x3[i][j] * mtz3x1[j];
+        }
+        mtzResultado[i] = somaLinha;
+    }
 }
