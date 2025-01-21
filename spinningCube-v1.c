@@ -5,9 +5,11 @@
 #define M_PI 3.141592
 #endif
 
-//gcc spinningCube-v1.c `sdl2-config --cflags --libs` -o out -lm
 /*
-otographic projection logic applied
+Voce pode compilar esse programa com o comando:
+//gcc spinningCube-v1.c `sdl2-config --cflags --libs` -o out -lm
+
+//Using weak otographic projection logic 
 */
 void tornaPixelsBrancos(Uint32*, int, int);
 void tornaPixelsPretos(Uint32*, int, int);
@@ -15,6 +17,7 @@ void multiplicaMatrizes(double*, double[3][3], double*);
 void rotacionaVertices(double[8][3], char, double);
 void converteVertices3d_2d(double[3][3], double[3][2], int, int);
 void desenhaCuboPorVertices(double[8][2], SDL_Renderer*);
+Uint32 funcaoCallbackTimer(Uint32, void *);
 
 typedef struct estruturaVertice3d {
     double x;
@@ -38,13 +41,13 @@ typedef struct estruturaCubo2d {
 int main(){
     //Inicializando SDL e indicando o uso do subsistema de video (tem varios)
     SDL_Init(SDL_INIT_VIDEO);
+    SDL_Init(SDL_INIT_TIMER);
 
     //Obter largura e altura da tela
     SDL_DisplayMode displayMode;
     SDL_GetCurrentDisplayMode(0, &displayMode);
     int LARGURA_JANELA = displayMode.w; 
     int ALTURA_JANELA = displayMode.h;
-
 
     //Declaracao de variaveis
     int fechar = 0;
@@ -112,11 +115,18 @@ int main(){
     //Escalonar coordenadas
     for (int i = 0; i < 8; i++) {
         for (int j = 0; j < 3; j ++) {
-            mtzVertices3d[i][j] *= 250; 
+            mtzVertices3d[i][j] *= 200; 
         }
     }
 
     //-- Desenhar os pontos com SDL
+    //Criar timer para adicionar o evento de desenho a fila
+    //Definir intervalo de tempo ms
+    //60fps = 1.666666667 ms
+    Uint32 intervalo = 5;
+    void *parametroDeCallback;
+    SDL_TimerID SDL_MeuTimer = SDL_AddTimer(intervalo, funcaoCallbackTimer, parametroDeCallback);
+
     //Criando janela
      SDL_Window *janela = SDL_CreateWindow(
         "Spining cube window 2000",
@@ -154,29 +164,36 @@ int main(){
         if (evento.type == SDL_QUIT) {
             fechar = 1;
             break;
-        } 
+        }else if (evento.type == SDL_KEYDOWN) {
+            if (evento.key.keysym.sym == SDLK_ESCAPE) {
+                fechar = 1;
+                break;
+            }
 
-        //- Configurando e mostrando textura do background
-        //Carregando pixels na textura
-        SDL_UpdateTexture(texturaBackground, NULL, pixels, LARGURA_JANELA * sizeof(Uint32));
-        //Manda o renderizador limpar a tela (preenche com a cor configurada na declaracao)
-        SDL_RenderClear(renderizador);
-        //Copiar texturaBackground para o renderizador
-        SDL_RenderCopy(renderizador, texturaBackground, NULL, NULL);
+        }else if (evento.type == SDL_USEREVENT){
+            printf("DESENHAR!\n");
+            //- Configurando e mostrando textura do background
+            //Carregando pixels na textura
+            SDL_UpdateTexture(texturaBackground, NULL, pixels, LARGURA_JANELA * sizeof(Uint32));
+            //Manda o renderizador limpar a tela (preenche com a cor configurada na declaracao)
+            SDL_RenderClear(renderizador);
+            //Copiar texturaBackground para o renderizador
+            SDL_RenderCopy(renderizador, texturaBackground, NULL, NULL);
 
-        //Converter vertices para 2d
-        converteVertices3d_2d(mtzVertices3d, mtzVertices2d, LARGURA_JANELA, ALTURA_JANELA);
+            //Converter vertices para 2d
+            converteVertices3d_2d(mtzVertices3d, mtzVertices2d, LARGURA_JANELA, ALTURA_JANELA);
 
-        //Desenhar cubo
-        desenhaCuboPorVertices(mtzVertices2d, renderizador);
-    
-        //Rotacionar vertices 3d
-        rotacionaVertices(mtzVertices3d, 'x', 1);
-        rotacionaVertices(mtzVertices3d, 'y', 1);
-        rotacionaVertices(mtzVertices3d, 'z', 1);
+            //Desenhar cubo
+            desenhaCuboPorVertices(mtzVertices2d, renderizador);
+        
+            //Rotacionar vertices 3d
+            rotacionaVertices(mtzVertices3d, 'x', 0.05);
+            rotacionaVertices(mtzVertices3d, 'y', 0.05);
+            rotacionaVertices(mtzVertices3d, 'z', 0.05);
 
-        //Carrega o back-buffer para o front-buffer
-        SDL_RenderPresent(renderizador);
+            //Carrega o back-buffer para o front-buffer
+            SDL_RenderPresent(renderizador);
+        }
     }
 
     //Chamadas de limpeza
@@ -337,7 +354,7 @@ void converteVertices3d_2d(double mtzVertices3d[3][3], double mtzVertices2d[3][2
 }
 
 void desenhaCuboPorVertices(double mtzVertices2d[8][2], SDL_Renderer *renderizador){
-        //TODO - Colocar isso em um FOR
+        //TODO - Colocar isso em um FOR (so Deus sabe como)
         //Vertices 0 -> 3
         SDL_RenderDrawLine(renderizador, 
         mtzVertices2d[0][0], mtzVertices2d[0][1], 
@@ -386,4 +403,26 @@ void desenhaCuboPorVertices(double mtzVertices2d[8][2], SDL_Renderer *renderizad
         SDL_RenderDrawLine(renderizador, 
         mtzVertices2d[3][0], mtzVertices2d[3][1], 
         mtzVertices2d[7][0], mtzVertices2d[7][1]);
+}
+
+Uint32 funcaoCallbackTimer(Uint32 intervalo, void *parametro){
+    //Criar evento
+    SDL_Event eventoDesenho;
+    SDL_UserEvent eventoUserDesenho;
+
+    /* In this example, our callback pushes an SDL_USEREVENT event
+    into the queue, and causes our callback to be called again at the
+    same interval: */
+
+    eventoUserDesenho.type = SDL_USEREVENT;
+    eventoUserDesenho.code = 0;
+    eventoUserDesenho.data1 = NULL;
+    eventoUserDesenho.data2 = NULL;
+
+    eventoDesenho.type = SDL_USEREVENT;
+    eventoDesenho.user = eventoUserDesenho;
+
+    //Adicionar evento a fila
+    SDL_PushEvent(&eventoDesenho);
+    return(intervalo);
 }
